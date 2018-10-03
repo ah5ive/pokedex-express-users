@@ -14,7 +14,7 @@ const pg = require('pg');
 
 // Initialise postgres client
 const config = {
-  user: 'akira',
+  user: 'Haruspring',
   host: '127.0.0.1',
   database: 'pokemons',
   port: 5432,
@@ -74,6 +74,7 @@ app.engine('jsx', reactEngine);
 }
 
 const getNew = (request, response) => {
+
   response.render('pokemon/new');
 }
 
@@ -94,15 +95,17 @@ const getPokemon = (request, response) => {
 
 const postPokemon = (request, response) => {
   let params = request.body;
-  
-  const queryString = 'INSERT INTO pokemon(name, height) VALUES($1, $2);';
-  const values = [params.name, params.height];
+
+  const queryString = 'INSERT INTO pokemon(name, img, weight, height) VALUES($1, $2, $3, $4)';
+  const values = [params.name, params.img, params.weight, params.height];
 
   pool.query(queryString, values, (err, result) => {
     if (err) {
       console.log('query error:', err.stack);
     } else {
-      console.log('query result:', result);
+
+      console.log("update", result.rows.id)
+      console.log('query post result:', result.rows);
 
       // redirect to home page
       response.redirect('/');
@@ -144,11 +147,40 @@ const updatePokemon = (request, response) => {
 }
 
 const deletePokemonForm = (request, response) => {
-  response.send("COMPLETE ME");
+    let id = request.params['id'];
+
+    const queryString = 'SELECT * FROM pokemon WHERE id = ' + id + ';';
+
+    console.log(queryString);
+
+    pool.query(queryString,(err, result)=>{
+        if(err){
+            console.error('delete Query error', err);
+        } else {
+            console.log('delete Query result:',result.rows[0]);
+
+            response.render('pokemon/delete',{pokemon: result.rows[0]});
+        }
+    })
 }
 
 const deletePokemon = (request, response) => {
-  response.send("COMPLETE ME");
+    let id = request.params['id'];
+
+    const queryString = 'DELETE FROM pokemon WHERE id = ' + id + ';';
+    // const queryString = 'DELETE FROM pokemon WHERE pokemon.name =' ;
+    pool.query(queryString,(err,result)=>{
+            console.log("Delete pokemon",result.rows);
+
+            if(err){
+                console.log("delete pokemon got error", err);
+
+                response.status(500).send("GG!");
+            } else {
+                response.redirect('/');
+            }
+    })
+
 }
 /**
  * ===================================
@@ -156,8 +188,26 @@ const deletePokemon = (request, response) => {
  * ===================================
  */
 
+const users = (request,response)=>{
+
+    const queryString = 'SELECT * from users;'
+
+    pool.query(queryString, (err, result) => {
+    if (err) {
+      console.error('Query error:', err.stack);
+    } else {
+      console.log('Query result:', result);
+
+      // redirect to home page
+      response.render( 'users/users', {users: result.rows} );
+    }
+  });
+
+}
+
 
 const userNew = (request, response) => {
+
   response.render('users/new');
 }
 
@@ -194,10 +244,13 @@ const userCreate = (request, response) => {
 app.get('/', getRoot);
 
 app.get('/pokemon/:id/edit', editPokemonForm);
-app.get('/pokemon/new', getNew);
-app.get('/pokemon/:id', getPokemon);
+
 app.get('/pokemon/:id/delete', deletePokemonForm);
 
+app.get('/pokemon/new', getNew);
+
+app.get('/pokemon/:id', getPokemon);
+///pokemon/:id/delete
 app.post('/pokemon', postPokemon);
 
 app.put('/pokemon/:id', updatePokemon);
@@ -206,8 +259,13 @@ app.delete('/pokemon/:id', deletePokemon);
 
 // TODO: New routes for creating users
 
+//get form
 app.get('/users/new', userNew);
+
+app.get('/allusers', users);
+
 app.post('/users', userCreate);
+
 
 /**
  * ===================================
