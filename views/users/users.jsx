@@ -1,5 +1,4 @@
 var React = require("react");
-var Allusers = require("/users/users")
 
 class usersCreated extends React.Component {
   render() {
