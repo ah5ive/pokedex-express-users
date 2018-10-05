@@ -12,6 +12,7 @@ const express = require('express');
 const methodOverride = require('method-override');
 const pg = require('pg');
 const cookieParser = require('cookie-parser');
+const sha256 = require('js-sha256');
 // Initialise postgres client
 const config = {
   user: 'Haruspring',
@@ -265,7 +266,10 @@ const userCreate = (request, response) => {
 
   const queryString = 'INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id';
 
-  const values = [params.name, params.password];
+  //inserthash
+  var hashedValue = sha256(params.password);
+
+  const values = [params.name, hashedValue];
 
   console.log(queryString);
 
@@ -352,6 +356,11 @@ const loginForm = (request,response)=>{
 const login = (request,response)=>{
 
     let params = request.body;
+
+    var hashedValue = sha256(params.password)
+
+    console.log("hashedValue", hashedValue);
+
     console.log(params.name);
 
     const queryString = "SELECT * from users WHERE name ='"+ params.name + "';";
@@ -368,7 +377,7 @@ const login = (request,response)=>{
         console.log('sign in query result:', result.rows);
 
 
-        if(params.name === result.rows[0].name && params.password === result.rows[0].password){
+        if(params.name === result.rows[0].name && hashedValue === result.rows[0].password){
 
             response.cookie('signin', 'true');
 
