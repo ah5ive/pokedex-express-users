@@ -13,7 +13,9 @@ class userId extends React.Component {
               </li>
             ))}
           </ul>
-
+            <form method="POST" action="/logout">
+            <input type="submit" value="logout"/>
+            </form>
           </div>
     );
   }

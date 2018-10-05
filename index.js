@@ -11,7 +11,7 @@
 const express = require('express');
 const methodOverride = require('method-override');
 const pg = require('pg');
-
+const cookieParser = require('cookie-parser');
 // Initialise postgres client
 const config = {
   user: 'Haruspring',
@@ -41,7 +41,7 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
-
+app.use(cookieParser());
 
 // Set react-views to be the default view engine
 const reactEngine = require('express-react-views').createEngine();
@@ -67,6 +67,19 @@ app.engine('jsx', reactEngine);
     } else {
       console.log('Query result:', result);
 
+        //set var visit to count visits
+        var visits;
+        console.log("current visits", request.cookies['homevisits']);
+
+        if(request.cookies['homevisits'] === undefined){
+
+            visits = 1;
+        } else {
+
+            visits = parseInt(request.cookies['visits']) + 1;
+        }
+
+        response.cookie('homevisit',visits);
       // redirect to home page
       response.render( 'pokemon/home', {pokemon: result.rows} );
     }
@@ -248,9 +261,11 @@ const userNew = (request, response) => {
 
 const userCreate = (request, response) => {
 
-  const queryString = 'INSERT INTO users (name) VALUES ($1)';
+  let params = request.body;
 
-  const values = [request.body.name];
+  const queryString = 'INSERT INTO users (name, password) VALUES ($1, $2) RETURNING id';
+
+  const values = [params.name, params.password];
 
   console.log(queryString);
 
@@ -262,8 +277,13 @@ const userCreate = (request, response) => {
       response.send('dang it.');
     } else {
 
-      console.log('Query result:', result);
+      console.log('create query result:', result.rows);
 
+       response.cookie('signin', 'true');
+
+        let createdId = result.rows[0].id;
+
+        console.log('created:'+ createdId)
       // redirect to home page
       response.redirect('/');
     }
@@ -294,6 +314,83 @@ const userId = (request,response)=>{
 
 
 }
+
+//============
+ // cookies test
+//============
+
+const cookieTest = (request, response) => {
+
+    console.log("COOKIE TEST: ", request.cookies);
+
+    let message = "welcome to our site!"
+
+    if(request.cookies['signin'] === 'true'){
+
+        // 'your logged in';
+        response.send('you are logged in!');
+    }else{
+        // 'your not logged in';
+        // response.redirect('/')
+        response.send('you are not logged in!');
+
+    }
+    response.send(message);
+};
+
+const logout =(request,response)=>{
+    response.clearCookie('signin');
+    response.send('you are log out');
+}
+
+const loginForm = (request,response)=>{
+
+    response.render('users/login');
+    //set cookie
+}
+
+const login = (request,response)=>{
+
+    let params = request.body;
+    console.log(params.name);
+
+    const queryString = "SELECT * from users WHERE name ='"+ params.name + "';";
+
+
+    pool.query(queryString, (err, result) => {
+
+    if (err) {
+
+      console.error('Query error:', err.stack);
+      response.send('dang it.');
+    } else {
+
+        console.log('sign in query result:', result.rows);
+
+
+        if(params.name === result.rows[0].name && params.password === result.rows[0].password){
+
+            response.cookie('signin', 'true');
+
+            response.redirect('/user/' + result.rows[0].id);
+
+        } else {
+
+
+            response.send("User Not Found")
+        }
+
+        //let createdId = result.rows[0].id;
+
+        //console.log('created:'+ createdId)
+      // redirect to home page
+
+    }
+  });
+
+
+}
+
 
 /**
  * ===================================
@@ -327,6 +424,14 @@ app.delete('/pokemon/:id', deletePokemon);
 
 //get form
 app.get('/users/new', userNew);
+
+app.get('/testcookie',cookieTest);
+
+app.get('/login',loginForm);
+
+app.post('/userlogin',login);
+
+app.post('/logout',logout);
 
 app.get('/allusers', users);
 
